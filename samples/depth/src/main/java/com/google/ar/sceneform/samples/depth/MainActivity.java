@@ -5,6 +5,7 @@ import android.animation.ObjectAnimator;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.widget.Toast;
 
@@ -18,7 +19,9 @@ import com.google.ar.core.Anchor;
 import com.google.ar.core.Config;
 import com.google.ar.core.HitResult;
 import com.google.ar.core.Plane;
+import com.google.ar.core.RecordingConfig;
 import com.google.ar.core.Session;
+import com.google.ar.core.exceptions.RecordingFailedException;
 import com.google.ar.sceneform.AnchorNode;
 import com.google.ar.sceneform.ArSceneView;
 import com.google.ar.sceneform.Node;
@@ -33,6 +36,7 @@ import com.google.ar.sceneform.ux.ArFragment;
 import com.google.ar.sceneform.ux.BaseArFragment;
 import com.google.ar.sceneform.ux.TransformableNode;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 
@@ -98,6 +102,8 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     protected void onStop() {
         super.onStop();
+
+        stopRecording(arFragment.getArSceneView().getSession());
 
         if (modelAnimator != null && modelAnimator.isRunning()) {
             modelAnimator.pause();
@@ -165,7 +171,7 @@ public class MainActivity extends AppCompatActivity implements
         modelAnimator.addListener(new Animator.AnimatorListener() {
             @Override
             public void onAnimationStart(Animator animation) {
-                playSound();
+                //playSound();
             }
 
             @Override
@@ -180,8 +186,7 @@ public class MainActivity extends AppCompatActivity implements
 
             @Override
             public void onAnimationRepeat(Animator animation) {
-                stopSound();
-                playSound();
+
             }
         });
         modelAnimator.start();
@@ -217,10 +222,32 @@ public class MainActivity extends AppCompatActivity implements
         /*if (session.isDepthModeSupported(Config.DepthMode.RAW_DEPTH_ONLY))
             config.setDepthMode(Config.DepthMode.RAW_DEPTH_ONLY);*/
 
+        startRecording(session);
         if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
             config.setDepthMode(Config.DepthMode.AUTOMATIC);
         }
 
         config.setUpdateMode(Config.UpdateMode.LATEST_CAMERA_IMAGE);
+    }
+
+    public void startRecording(Session session) {
+        File outFile = new File(this.getExternalFilesDir(null),
+            "recording-${System.currentTimeMillis()}.mp4");
+        Log.i("RECORDING", "Recording using "+ outFile.getAbsolutePath());
+        RecordingConfig mp4DatasetUri =
+            new RecordingConfig(session).setMp4DatasetUri(Uri.fromFile(outFile));
+        try {
+            session.startRecording(mp4DatasetUri);
+        } catch (RecordingFailedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void stopRecording(Session session) {
+        try {
+            session.stopRecording();
+        } catch (RecordingFailedException e) {
+            e.printStackTrace();
+        }
     }
 }
